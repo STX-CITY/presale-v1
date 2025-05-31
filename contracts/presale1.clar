@@ -1,4 +1,3 @@
-
 ;; STXCITY Presale Contract v1
 
 (use-trait ft-trait .sip-010-trait-ft-standard.sip-010-trait)
@@ -28,34 +27,41 @@
 (define-constant LAUNCHPAD_TOKEN .stxcity-token)
 (define-constant LAUNCHPAD_ADDRESS (as-contract tx-sender))
 (define-constant AMM_WALLET 'ST351YPXNR61E8137E5VNBW31AZQ88MB2DMNXFFF6) ;; TODO: replace real amm here
-(define-constant STXCITY_WALLET 'ST1YCCFFCV8G9V2CSXRY8T7H8KYZCN4QWDF9SYEM7) ;; STXCITY wallet
-(define-constant TOKEN_TO_LIST u300000000) ;; 300M 
-(define-constant TOKEN_TO_SELL u200000000) ;; 200M
-(define-constant START_BLOCK u50229) ;; default 5 block from create
-(define-constant WHITELIST_END_BLOCK u55229) ;; End of whitelist period, start of public sale
-(define-constant END_BLOCK u60228)
+(define-constant STXCITY_WALLET 'STJ4BTGEVYQCWW00QB7AXMA2VV3FX58XR5H7G1M) ;; STXCITY wallet
+(define-constant TOKEN_TO_LIST u4000) ;; 100M 
+(define-constant TOKEN_TO_SELL u1600)
+(define-constant START_BLOCK u52544) ;; default 5 block from create
+(define-constant END_BLOCK u52545)
+(define-constant WHITELIST_END_BLOCK u52544) ;; End of whitelist period, start of public sale
+
+;; Constants for STXCITY fee distribution
+(define-constant STXCITY_FEE_PERCENT u5)  ;; 5% STXCITY fee
+(define-constant DEPLOYER_PERCENT u50)   ;; 50% raise to deployer
 
 
-;; Vesting milestone constants
-;; These define the block heights and percentages for token vesting
-;; IMPORTANT: When customizing milestones, follow these rules:
-;; 1. Milestone percentages MUST be in ascending order (each one higher than the previous)
-;; 2. The final active milestone MUST be set to 100% (u100)
-;; 3. If using fewer milestones, adjust ACTIVE_MILESTONE_COUNT accordingly
 
-;; Block heights (relative to distribution start)
-(define-constant MILESTONE_1_BLOCKS u0)      ;; Immediate - 20% unlocked right after finalize-presale
-(define-constant MILESTONE_2_BLOCKS u500)    ;; ~3.5 days - 40% unlocked
-(define-constant MILESTONE_3_BLOCKS u1000)   ;; 7 days - 60% unlocked
-(define-constant MILESTONE_4_BLOCKS u1500)   ;; 10.4 days - 80% unlocked
-(define-constant MILESTONE_5_BLOCKS u2100)   ;; 14.6 days - 100% unlocked
+
+
+;; Milestone configuration used:
+;; Active milestone count: 5
+;; Milestone 1: Block 0 - 20% (0.0 days)
+;; Milestone 2: Block 500 - 40% (3.5 days)
+;; Milestone 3: Block 1000 - 60% (7.0 days)
+;; Milestone 4: Block 1500 - 80% (10.4 days)
+;; Milestone 5: Block 2100 - 100% (14.6 days)
+
+(define-constant MILESTONE_1_BLOCKS u0)      
+(define-constant MILESTONE_2_BLOCKS u500)    
+(define-constant MILESTONE_3_BLOCKS u1000)   
+(define-constant MILESTONE_4_BLOCKS u1500)   
+(define-constant MILESTONE_5_BLOCKS u2100)   
 
 ;; Vesting percentages at each milestone
-(define-constant MILESTONE_1_PERCENT u20)    ;; 20%
-(define-constant MILESTONE_2_PERCENT u40)    ;; 40%
-(define-constant MILESTONE_3_PERCENT u60)    ;; 60%
-(define-constant MILESTONE_4_PERCENT u80)    ;; 80%
-(define-constant MILESTONE_5_PERCENT u100)   ;; 100% - final milestone
+(define-constant MILESTONE_1_PERCENT u20)    
+(define-constant MILESTONE_2_PERCENT u40)    
+(define-constant MILESTONE_3_PERCENT u60)    
+(define-constant MILESTONE_4_PERCENT u80)    
+(define-constant MILESTONE_5_PERCENT u100)   
 
 ;; Set how many milestones are actually used (1-5)
 (define-constant ACTIVE_MILESTONE_COUNT u5)
@@ -66,12 +72,14 @@
 (define-data-var deployer principal tx-sender)
 (define-data-var stx-pool uint u0)
 (define-data-var participant-amount uint u0)
-(define-data-var presale-hardcap uint u100000000)  ;; 200 STX
-(define-data-var presale-softcap uint u50000000)   ;; 100 STX
-(define-data-var min-buy uint u1000000)             ;; 10 STX
-(define-data-var max-buy uint u50000000)             ;; 50 STX
+(define-data-var presale-hardcap uint u1000000000)  
+(define-data-var presale-softcap uint u50000000)  
+(define-data-var min-buy uint u1000000)             
+(define-data-var max-buy uint u50000000)             
 (define-data-var distribution-height uint u0)        ;; When tokens start vesting
 
+;; Whitelist map - stores addresses that can participate during whitelist period
+(define-map whitelist-addresses principal bool)
 
 
 ;; MAPS
@@ -84,9 +92,6 @@
     { user-addr: principal }
     uint
 )
-
-;; Whitelist map - stores addresses that can participate during whitelist period
-(define-map whitelist-addresses principal bool)
 
 ;; READ-ONLY FUNCTIONS
 
@@ -133,7 +138,7 @@
         deployer: (var-get deployer),
         distribution-height: (var-get distribution-height),
         distribution-started: distribution-started,
-        
+
         ;; Whitelist info
         whitelist-end-block: WHITELIST_END_BLOCK,
         whitelist-active: whitelist-active,
@@ -183,7 +188,8 @@
     milestone2: {blocks: MILESTONE_2_BLOCKS, percent: MILESTONE_2_PERCENT},
     milestone3: {blocks: MILESTONE_3_BLOCKS, percent: MILESTONE_3_PERCENT},
     milestone4: {blocks: MILESTONE_4_BLOCKS, percent: MILESTONE_4_PERCENT},
-    milestone5: {blocks: MILESTONE_5_BLOCKS, percent: MILESTONE_5_PERCENT}
+    milestone5: {blocks: MILESTONE_5_BLOCKS, percent: MILESTONE_5_PERCENT},
+    active-milestone-count: ACTIVE_MILESTONE_COUNT
   })
 )
 
@@ -201,7 +207,135 @@
       vested-amount: (/ (* (calculate-allocation user) (get-vested-percentage)) u100),  
 
       milestones: (get-vesting-schedule),
+      active-milestone-count: ACTIVE_MILESTONE_COUNT
     }
+  )
+)
+
+;; Get detailed vesting information for a specific address
+(define-read-only (get-user-vesting-details (user principal))
+  (let
+    (
+      (current-block burn-block-height)
+      (dist-height (var-get distribution-height))
+      (allocation (calculate-allocation user))
+      (claimed (get-claimed-amount user))
+      (vested-percent (get-vested-percentage))
+      (vested-amount (/ (* allocation vested-percent) u100))
+      (claimable (if (>= vested-amount claimed) (- vested-amount claimed) u0))
+      
+      ;; Calculate milestone block heights
+      (milestone1 (+ dist-height MILESTONE_1_BLOCKS))
+      (milestone2 (+ dist-height MILESTONE_2_BLOCKS))
+      (milestone3 (+ dist-height MILESTONE_3_BLOCKS))
+      (milestone4 (+ dist-height MILESTONE_4_BLOCKS))
+      (milestone5 (+ dist-height MILESTONE_5_BLOCKS))
+      
+      ;; Calculate milestone amounts
+      (amount1 (/ (* allocation MILESTONE_1_PERCENT) u100))
+      (amount2 (/ (* allocation MILESTONE_2_PERCENT) u100))
+      (amount3 (/ (* allocation MILESTONE_3_PERCENT) u100))
+      (amount4 (/ (* allocation MILESTONE_4_PERCENT) u100))
+      (amount5 (/ (* allocation MILESTONE_5_PERCENT) u100))
+      
+      ;; Check which milestone we're currently at
+      (current-milestone-number 
+        (if (>= current-block milestone5) u5
+          (if (>= current-block milestone4) u4
+            (if (>= current-block milestone3) u3
+              (if (>= current-block milestone2) u2
+                (if (>= current-block milestone1) u1
+                  u0
+                )
+              )
+            )
+          )
+        )
+      )
+      
+      ;; Get next milestone information
+      (next-milestone-number (+ current-milestone-number u1))
+      (next-milestone-block 
+        (if (< next-milestone-number u6)
+          (unwrap-panic 
+            (element-at 
+              (list milestone1 milestone2 milestone3 milestone4 milestone5) 
+              (- next-milestone-number u1)
+            )
+          )
+          u0
+        )
+      )
+      (next-milestone-amount 
+        (if (< next-milestone-number u6)
+          (unwrap-panic 
+            (element-at 
+              (list amount1 amount2 amount3 amount4 amount5) 
+              (- next-milestone-number u1)
+            )
+          )
+          u0
+        )
+      )
+      (blocks-until-next 
+        (if (and (< next-milestone-number u6) (> next-milestone-block current-block))
+          (- next-milestone-block current-block)
+          u0
+        )
+      )
+    )
+    (ok {
+      ;; Basic info
+      total-allocation: allocation,
+      claimed-amount: claimed,
+      claimable-now: claimable,
+      current-block: current-block,
+      distribution-started-at: dist-height,
+      vested-percent: vested-percent,
+      
+      ;; Current milestone info
+      current-milestone: {
+        number: current-milestone-number,
+        percent: (if (< current-milestone-number u1) u0
+                  (unwrap-panic 
+                    (element-at 
+                      (list MILESTONE_1_PERCENT MILESTONE_2_PERCENT MILESTONE_3_PERCENT 
+                            MILESTONE_4_PERCENT MILESTONE_5_PERCENT) 
+                      (- current-milestone-number u1)
+                    )
+                  )
+                ),
+        amount: (if (< current-milestone-number u1) u0
+                 (unwrap-panic 
+                   (element-at 
+                     (list amount1 amount2 amount3 amount4 amount5) 
+                     (- current-milestone-number u1)
+                   )
+                 )
+               )
+      },
+      
+      ;; Next milestone info (if any)
+      next-milestone: {
+        exists: (< next-milestone-number u6),
+        number: next-milestone-number,
+        block-height: next-milestone-block,
+        blocks-remaining: blocks-until-next,
+        amount: next-milestone-amount,
+        additional-claimable: (if (< next-milestone-number u8)
+                               (- next-milestone-amount vested-amount)
+                               u0)
+      },
+      
+      ;; All milestones
+      milestones: {
+        milestone1: { block: milestone1, amount: amount1, percent: MILESTONE_1_PERCENT, reached: (>= current-block milestone1) },
+        milestone2: { block: milestone2, amount: amount2, percent: MILESTONE_2_PERCENT, reached: (>= current-block milestone2) },
+        milestone3: { block: milestone3, amount: amount3, percent: MILESTONE_3_PERCENT, reached: (>= current-block milestone3) },
+        milestone4: { block: milestone4, amount: amount4, percent: MILESTONE_4_PERCENT, reached: (>= current-block milestone4) },
+        milestone5: { block: milestone5, amount: amount5, percent: MILESTONE_5_PERCENT, reached: (>= current-block milestone5) }
+      }
+    })
   )
 )
 
@@ -231,14 +365,15 @@
     ;; Validate deposit
     (asserts! (> END_BLOCK burn-block-height) ERR-PRESALE-ENDED)
     (asserts! (<= (var-get distribution-height) u0) ERR-DISTRIBUTION-ALREADY-STARTED)
-    
-    ;; Check whitelist status if in whitelist period
+
+     ;; Check whitelist status if in whitelist period
     (if (and (<= START_BLOCK burn-block-height) (< burn-block-height WHITELIST_END_BLOCK))
       ;; During whitelist period, check if user is whitelisted
       (asserts! (default-to false (map-get? whitelist-addresses tx-sender)) ERR-NOT-WHITELISTED)
       ;; After whitelist period or if whitelist equals start/end (no whitelist), anyone can buy
       true
     )
+
     (asserts! (>= amount (var-get min-buy)) ERR-INSUFFICIENT-AMOUNT)
     (asserts! (<= (+ user-deposit amount) (var-get max-buy)) ERR-MAX-DEPOSIT-EXCEEDED)
     (asserts! (<= (+ amount current-stx-pool) (var-get presale-hardcap)) ERR-HARDCAP-EXCEEDED)
@@ -267,6 +402,7 @@
     (ok true)
   )
 )
+
 
 
 ;; Finalize presale and start vesting
@@ -298,13 +434,27 @@
     ;; Set distribution height to current block
     (var-set distribution-height burn-block-height)
     
-    ;; Calculate 5% of raised STX for STXCITY wallet
-    (let ((stxcity-amount (/ (* (var-get stx-pool) u5) u100)))
+    ;; Calculate percentages of raised STX for distribution
+    (let (
+        ;; Calculate STXCITY fee amount (5%)
+        (stxcity-amount (/ (* (var-get stx-pool) STXCITY_FEE_PERCENT) u100))
+
+        (after-fee-amount (- (var-get stx-pool) stxcity-amount))
+
+        ;; Calculate deployer amount
+        (deployer-amount (/ (* after-fee-amount DEPLOYER_PERCENT) u100))
+
+        ;; Calculate remaining amount for AMM
+        (amm-amount (- after-fee-amount deployer-amount))
+      )
       ;; Send 5% of raised STX to STXCITY wallet
       (try! (as-contract (stx-transfer? stxcity-amount tx-sender STXCITY_WALLET)))
       
-      ;; Send remaining 95% of raised STX to AMM_WALLET
-      (try! (as-contract (stx-transfer? (- (var-get stx-pool) stxcity-amount) tx-sender AMM_WALLET)))
+      ;; Send 10% of raised STX back to deployer
+      (try! (as-contract (stx-transfer? deployer-amount tx-sender (var-get deployer))))
+      
+      ;; Send remaining 85% of raised STX to AMM_WALLET
+      (try! (as-contract (stx-transfer? amm-amount tx-sender AMM_WALLET)))
     )
     ;; Send token to AMM_WALLET
     (try! (as-contract (contract-call? token-trait transfer TOKEN_TO_LIST tx-sender AMM_WALLET none)))
@@ -331,6 +481,7 @@
     )
     (try! (check-is-initialized))
     
+    
     ;; Validate claim conditions
     (asserts! (> (var-get distribution-height) u0) ERR-PRESALE-NOT-ENDED)
     (asserts! (is-eq (contract-of token-trait) LAUNCHPAD_TOKEN) ERR-INVALID-TOKEN)
@@ -354,6 +505,7 @@
     (ok claimable)
   )
 )
+
 
 ;; Allow users to claim their STX back if presale fails to reach softcap
 (define-public (claim-stx-refund)
@@ -462,6 +614,11 @@
   (ok (asserts! (is-eq tx-sender (var-get deployer)) ERR-NOT-AUTHORIZED))
 )
 
+(define-private (check-is-initialized)
+  (ok (asserts! (var-get initialized) ERR-NOT-INITIALIZED))
+)
+
+
 ;; Whitelist management functions
 
 ;; Add a single address to the whitelist
@@ -519,9 +676,7 @@
   (default-to false (map-get? whitelist-addresses address))
 )
 
-(define-private (check-is-initialized)
-  (ok (asserts! (var-get initialized) ERR-NOT-INITIALIZED))
-)
+
 ;; Calculate claimable amount based on vesting schedule
 (define-private (get-claimable-amount (user principal))
   ;; If distribution hasn't started yet, nothing is claimable
@@ -542,6 +697,7 @@
     )
   )
 )
+
 
 (define-private (get-vested-percentage)
   (let
