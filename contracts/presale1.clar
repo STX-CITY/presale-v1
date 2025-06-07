@@ -26,23 +26,23 @@
 (define-constant ONE_6 u1000000) 
 (define-constant LAUNCHPAD_TOKEN .stxcity-token)
 (define-constant LAUNCHPAD_ADDRESS (as-contract tx-sender))
-(define-constant AMM_WALLET 'ST351YPXNR61E8137E5VNBW31AZQ88MB2DMNXFFF6) ;; TODO: replace real amm here
+(define-constant AMM_WALLET 'ST351YPXNR61E8137E5VNBW31AZQ88MB2DMNXFFF6) ;; TODO: replace real Velar address here
 (define-constant STXCITY_WALLET 'STJ4BTGEVYQCWW00QB7AXMA2VV3FX58XR5H7G1M) ;; STXCITY wallet
-(define-constant TOKEN_TO_LIST u4000) ;; 100M 
-(define-constant TOKEN_TO_SELL u1600)
-(define-constant START_BLOCK u52544) ;; default 5 block from create
-(define-constant END_BLOCK u52545)
-(define-constant WHITELIST_END_BLOCK u52544) ;; End of whitelist period, start of public sale
+(define-constant TOKEN_TO_LIST u4000) ;; parameter, user will replace it while creating presale
+(define-constant TOKEN_TO_SELL u1600) ;; parameter,
+(define-constant START_BLOCK u52544) ;; parameter, 
+(define-constant END_BLOCK u52545) ;; parameter, 
+(define-constant WHITELIST_END_BLOCK u52544) ;; parameter, End of whitelist period, start of public sale
 
 ;; Constants for STXCITY fee distribution
-(define-constant STXCITY_FEE_PERCENT u5)  ;; 5% STXCITY fee
-(define-constant DEPLOYER_PERCENT u50)   ;; 50% raise to deployer
+(define-constant STXCITY_FEE_PERCENT u5)  ;; 5% STXCITY fee, 
+(define-constant DEPLOYER_PERCENT u50)   ;; 50% raise to deployer, (parameter)
 
 
 
 
 
-;; Milestone configuration used:
+;; Milestone parameters configuration used:
 ;; Active milestone count: 5
 ;; Milestone 1: Block 0 - 20% (0.0 days)
 ;; Milestone 2: Block 500 - 40% (3.5 days)
@@ -64,7 +64,7 @@
 (define-constant MILESTONE_5_PERCENT u100)   
 
 ;; Set how many milestones are actually used (1-5)
-(define-constant ACTIVE_MILESTONE_COUNT u5)
+(define-constant ACTIVE_MILESTONE_COUNT u5) ;; maximum 5 milestones
 
 
 ;; STATE VARIABLES
@@ -72,10 +72,10 @@
 (define-data-var deployer principal tx-sender)
 (define-data-var stx-pool uint u0)
 (define-data-var participant-amount uint u0)
-(define-data-var presale-hardcap uint u1000000000)  
-(define-data-var presale-softcap uint u50000000)  
-(define-data-var min-buy uint u1000000)             
-(define-data-var max-buy uint u50000000)             
+(define-data-var presale-hardcap uint u1000000000)  ;; parameter
+(define-data-var presale-softcap uint u50000000)  ;; parameter
+(define-data-var min-buy uint u1000000)            ;; parameter
+(define-data-var max-buy uint u50000000)             ;; parameter
 (define-data-var distribution-height uint u0)        ;; When tokens start vesting
 
 ;; Whitelist map - stores addresses that can participate during whitelist period
@@ -439,21 +439,19 @@
         ;; Calculate STXCITY fee amount (5%)
         (stxcity-amount (/ (* (var-get stx-pool) STXCITY_FEE_PERCENT) u100))
 
-        (after-fee-amount (- (var-get stx-pool) stxcity-amount))
-
         ;; Calculate deployer amount
-        (deployer-amount (/ (* after-fee-amount DEPLOYER_PERCENT) u100))
+        (deployer-amount (/ (* (var-get stx-pool) DEPLOYER_PERCENT) u100))
 
         ;; Calculate remaining amount for AMM
-        (amm-amount (- after-fee-amount deployer-amount))
+        (amm-amount (- (- (var-get stx-pool) stxcity-amount) deployer-amount))
       )
-      ;; Send 5% of raised STX to STXCITY wallet
+      ;; Send % of raised STX to STXCITY wallet
       (try! (as-contract (stx-transfer? stxcity-amount tx-sender STXCITY_WALLET)))
       
-      ;; Send 10% of raised STX back to deployer
+      ;; Send % of raised STX back to deployer
       (try! (as-contract (stx-transfer? deployer-amount tx-sender (var-get deployer))))
       
-      ;; Send remaining 85% of raised STX to AMM_WALLET
+      ;; Send remaining % of raised STX to AMM_WALLET
       (try! (as-contract (stx-transfer? amm-amount tx-sender AMM_WALLET)))
     )
     ;; Send token to AMM_WALLET

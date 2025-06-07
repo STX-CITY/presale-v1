@@ -2,6 +2,9 @@
 
 This repository contains the smart contracts for the STXCITY token presale. The presale contract is designed to facilitate a fair and transparent token distribution with features like whitelisting, vesting schedules, and automated fund distribution.
 
+You can use the testnet version of this contract at: https://testnet.stx.city/presale/explore
+Create a testnet presale at: https://testnet.stx.city/presale/create
+
 ## Contract Overview
 
 The presale contract (`presale1.clar`) manages the entire token sale process, from accepting STX deposits to distributing tokens according to a vesting schedule. It includes mechanisms for whitelisting participants, enforcing minimum and maximum purchase limits, and handling both successful and failed presale scenarios.
