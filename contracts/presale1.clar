@@ -21,6 +21,7 @@
 (define-constant ERR-SOFTCAP-NOT-REACHED (err u8003))
 (define-constant ERR-DISTRIBUTION-ALREADY-STARTED (err u8004))
 (define-constant ERR-NOT-WHITELISTED (err u8005))
+(define-constant ERR-INVALID-BLOCK-HEIGHTS (err u8006))
 
 ;; CONSTANTS
 (define-constant ONE_6 u1000000) 
@@ -864,11 +865,33 @@
   )
 )
 
+;; Validate block heights
+(define-private (validate-block-heights)
+  (let
+    (
+      (is-valid (and
+                  ;; Check that start block is before end block
+                  (< START_BLOCK END_BLOCK)
+                  ;; Check that whitelist end block is between start and end blocks
+                  ;; or equal to start block (no whitelist period)
+                  (and
+                    (>= WHITELIST_END_BLOCK START_BLOCK)
+                    (<= WHITELIST_END_BLOCK END_BLOCK)
+                  )
+                ))
+    )
+    (asserts! is-valid (err ERR-INVALID-BLOCK-HEIGHTS)) ;; Error if block height configuration is invalid
+    (ok true)
+  )
+)
+
 (begin
     ;; Auto-initialize the presale contract
     ;; Set up the presale parameters
             ;; Validate milestone configuration
             (try! (validate-milestone-percentages))
+            ;; Validate block heights
+            (try! (validate-block-heights))
             
             (try! (contract-call? .stxcity-token transfer (+ TOKEN_TO_LIST TOKEN_TO_SELL) tx-sender LAUNCHPAD_ADDRESS none))
             (var-set initialized true)
