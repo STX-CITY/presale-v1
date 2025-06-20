@@ -22,6 +22,7 @@
 (define-constant ERR-DISTRIBUTION-ALREADY-STARTED (err u8004))
 (define-constant ERR-NOT-WHITELISTED (err u8005))
 (define-constant ERR-INVALID-BLOCK-HEIGHTS (err u8006))
+(define-constant ERR-MILESTONE-CONFIGURATION (err u8007))
 
 ;; CONSTANTS
 (define-constant ONE_6 u1000000) 
@@ -857,7 +858,7 @@
                          u100)
                 ))
     )
-    (asserts! is-valid (err u10000)) ;; Error if milestone configuration is invalid
+    (asserts! is-valid (err ERR-MILESTONE-CONFIGURATION)) ;; Error if milestone configuration is invalid
     (ok true)
   )
 )
