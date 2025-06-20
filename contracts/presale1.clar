@@ -25,6 +25,7 @@
 (define-constant ERR-MILESTONE-CONFIGURATION (err u8007))
 
 ;; CONSTANTS
+(define-constant DEPLOYER tx-sender)
 (define-constant ONE_6 u1000000) 
 (define-constant LAUNCHPAD_TOKEN .stxcity-token)
 (define-constant LAUNCHPAD_ADDRESS (as-contract tx-sender))
@@ -71,7 +72,6 @@
 
 ;; STATE VARIABLES
 (define-data-var initialized bool false)
-(define-constant DEPLOYER tx-sender)
 (define-data-var stx-pool uint u0)
 (define-data-var participant-amount uint u0)
 (define-data-var presale-hardcap uint u1000000000)  ;; parameter
@@ -868,6 +868,8 @@
   (let
     (
       (is-valid (and
+                  ;; Check that start block is greater than or equal to current block height
+                  (>= START_BLOCK burn-block-height)
                   ;; Check that start block is before end block
                   (< START_BLOCK END_BLOCK)
                   ;; Check that whitelist end block is between start and end blocks
@@ -886,19 +888,13 @@
 (begin
     ;; Auto-initialize the presale contract
     ;; Set up the presale parameters
-            ;; Validate milestone configuration
-            (try! (validate-milestone-percentages))
-            ;; Validate block heights
-            (try! (validate-block-heights))
-            
-            (try! (contract-call? .stxcity-token transfer (+ TOKEN_TO_LIST TOKEN_TO_SELL) tx-sender LAUNCHPAD_ADDRESS none))
-            (var-set initialized true)
-            (print {
-                type: "initialize-presale",
-                token-amount: (+ TOKEN_TO_LIST TOKEN_TO_SELL),
-                start-block: START_BLOCK,
-                end-block: END_BLOCK
-            })
+    ;; Validate milestone configuration
+    (try! (validate-milestone-percentages))
+    ;; Validate block heights
+    (try! (validate-block-heights))
+    
+    (try! (contract-call? .stxcity-token transfer (+ TOKEN_TO_LIST TOKEN_TO_SELL) tx-sender LAUNCHPAD_ADDRESS none))
+    (var-set initialized true)
     ;; Transfer STX fee to stxcity wallet
     (try! (stx-transfer? u200000 tx-sender 'ST2J9WNZV97AJ49ZDR77WGNR3HDHQRSEHZ45JXB21))
     (print (get-presale-info))
