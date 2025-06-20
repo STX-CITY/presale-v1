@@ -349,10 +349,6 @@
   (/ (* (get-stx-quote) (var-get stx-pool)) ONE_6)
 )
 
-(define-read-only (get-current-block-height)
-  (ok {stacks: burn-block-height, bitcoin: burn-block-height})
-)
-
 ;; PUBLIC FUNCTIONS
 
 ;; Deposit STX to participate in presale
