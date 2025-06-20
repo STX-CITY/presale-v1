@@ -70,7 +70,7 @@
 
 ;; STATE VARIABLES
 (define-data-var initialized bool false)
-(define-data-var deployer principal tx-sender)
+(define-constant DEPLOYER tx-sender)
 (define-data-var stx-pool uint u0)
 (define-data-var participant-amount uint u0)
 (define-data-var presale-hardcap uint u1000000000)  ;; parameter
@@ -138,7 +138,7 @@
         softcap-reached: softcap-reached,
         
         ;; Distribution info
-        deployer: (var-get deployer),
+        deployer: DEPLOYER,
         distribution-height: (var-get distribution-height),
         distribution-started: distribution-started,
         finalized: is-finalized,
@@ -356,8 +356,9 @@
   (let
     (
       (current-stx-pool (var-get stx-pool))
-      (exists (is-some (map-get? users-deposits { user-addr: tx-sender })))
-      (user-deposit (get-user-deposits tx-sender))
+      (user-deposit-opt (map-get? users-deposits { user-addr: tx-sender }))
+      (user-deposit (default-to u0 user-deposit-opt))
+      (exists (is-some user-deposit-opt))
       (participants (var-get participant-amount))
     )
     (try! (check-is-initialized))
@@ -453,7 +454,7 @@
       (try! (as-contract (stx-transfer? stxcity-amount tx-sender STXCITY_WALLET)))
       
       ;; Send % of raised STX back to deployer
-      (try! (as-contract (stx-transfer? deployer-amount tx-sender (var-get deployer))))
+      (try! (as-contract (stx-transfer? deployer-amount tx-sender DEPLOYER)))
       
       ;; Send remaining % of raised STX to AMM_WALLET
       (try! (as-contract (stx-transfer? amm-amount tx-sender AMM_WALLET)))
@@ -560,12 +561,12 @@
         (token-balance (unwrap-panic (contract-call? token-trait get-balance LAUNCHPAD_ADDRESS)))
       )
       ;; Transfer all tokens back to the deployer since the presale failed
-      (try! (as-contract (contract-call? token-trait transfer token-balance tx-sender (var-get deployer) none)))
+      (try! (as-contract (contract-call? token-trait transfer token-balance tx-sender DEPLOYER none)))
       
       (print {
         type: "withdraw-tokens-failed-presale",
         amount: token-balance,
-        recipient: (var-get deployer),
+        recipient: DEPLOYER,
         reason: "presale-failed-to-reach-softcap"
       })
       
@@ -597,12 +598,12 @@
       (asserts! (> withdrawable-amount u0) ERR-NOTHING-TO-CLAIM)
       
       ;; Transfer unsold tokens back to the deployer
-      (try! (as-contract (contract-call? token-trait transfer withdrawable-amount tx-sender (var-get deployer) none)))
+      (try! (as-contract (contract-call? token-trait transfer withdrawable-amount tx-sender DEPLOYER none)))
       
       (print {
         type: "withdraw-unsold-tokens",
         amount: withdrawable-amount,
-        recipient: (var-get deployer),
+        recipient: DEPLOYER,
         total-allocated: total-allocated,
         total-unsold: unsold-tokens
       })
@@ -614,7 +615,7 @@
 ;; PRIVATE FUNCTIONS
 
 (define-private (check-is-deployer)
-  (ok (asserts! (is-eq tx-sender (var-get deployer)) ERR-NOT-AUTHORIZED))
+  (ok (asserts! (is-eq tx-sender DEPLOYER) ERR-NOT-AUTHORIZED))
 )
 
 (define-private (check-is-initialized)
