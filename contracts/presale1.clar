@@ -77,6 +77,7 @@
 (define-data-var min-buy uint u1000000)            ;; parameter
 (define-data-var max-buy uint u50000000)             ;; parameter
 (define-data-var distribution-height uint u0)        ;; When tokens start vesting
+(define-data-var finalized bool false)               ;; Whether presale has been finalized
 
 ;; Whitelist map - stores addresses that can participate during whitelist period
 (define-map whitelist-addresses principal bool)
@@ -105,6 +106,7 @@
       (hardcap-reached (>= (var-get stx-pool) (var-get presale-hardcap)))
       (softcap-reached (>= (var-get stx-pool) (var-get presale-softcap)))
       (distribution-started (> (var-get distribution-height) u0))
+      (is-finalized (var-get finalized))
       (whitelist-active (and (<= START_BLOCK current-block) (< current-block WHITELIST_END_BLOCK)))
       (user-is-whitelisted (default-to false (map-get? whitelist-addresses tx-sender)))
     )
@@ -138,6 +140,7 @@
         deployer: (var-get deployer),
         distribution-height: (var-get distribution-height),
         distribution-started: distribution-started,
+        finalized: is-finalized,
 
         ;; Whitelist info
         whitelist-end-block: WHITELIST_END_BLOCK,
@@ -411,6 +414,9 @@
     (try! (check-is-initialized))
     (try! (check-is-deployer))
     
+    ;; Check if presale has already been finalized
+    (asserts! (not (var-get finalized)) ERR-DISTRIBUTION-ALREADY-STARTED)
+    
     (asserts! (is-eq (contract-of token-trait) LAUNCHPAD_TOKEN) ERR-INVALID-TOKEN)
     ;; Ensure presale can be finalized under one of these conditions:
     ;; 1. Presale ended AND softcap reached
@@ -431,8 +437,9 @@
               )
               ) ERR-PRESALE-NOT-ENDED)
     
-    ;; Set distribution height to current block
+    ;; Set distribution height to current block and mark as finalized
     (var-set distribution-height burn-block-height)
+    (var-set finalized true)
     
     ;; Calculate percentages of raised STX for distribution
     (let (
@@ -462,7 +469,8 @@
       type: "presale-finalized",
       stx-raised: (var-get stx-pool),
       participants: (var-get participant-amount),
-      distribution-height: burn-block-height
+      distribution-height: burn-block-height,
+      finalized: true
     })
     (ok true)
   )
