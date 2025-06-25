@@ -352,6 +352,7 @@
 
 ;; PUBLIC FUNCTIONS
 
+
 ;; Deposit STX to participate in presale
 (define-public (buy (amount uint))
   (let
@@ -359,7 +360,7 @@
       (current-stx-pool (var-get stx-pool))
       (user-deposit-opt (map-get? users-deposits { user-addr: tx-sender }))
       (user-deposit (default-to u0 user-deposit-opt))
-      (exists (is-some user-deposit-opt))
+      (has-deposited (> user-deposit u0))
       (participants (var-get participant-amount))
     )
     (try! (check-is-initialized))
@@ -387,18 +388,18 @@
     (map-set users-deposits {user-addr: tx-sender} (+ user-deposit amount))
     
     ;; Update participant count if new user
-    (if (not exists)
+    (if (not has-deposited)
       (var-set participant-amount (+ participants u1))
       true
     )
     
     ;; Print appropriate event data
     (print {
-      type: (if exists "deposit" "deposit-new-user"),
+      type: (if has-deposited "deposit" "deposit-new-user"),
       user: tx-sender,
       amount: amount,
       total-deposit: (+ user-deposit amount),
-      total-participants: (if exists participants (+ participants u1))
+      total-participants: (if has-deposited participants (+ participants u1))
     })
     
     (ok true)
