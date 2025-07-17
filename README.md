@@ -2,6 +2,11 @@
 
 This repository contains the smart contracts for the STXCITY token presale. The presale contract is designed to facilitate a fair and transparent token distribution with features like whitelisting, vesting schedules, and automated fund distribution.
 
+Contract Audit by SetDev Team: [https://drive.google.com/file/d/1ZL4lWh9yUZrlBa7RCevSh2Ss1lhw7Ssm/view](https://drive.google.com/file/d/1ZL4lWh9yUZrlBa7RCevSh2Ss1lhw7Ssm/view)
+
+
+
+
 You can use the testnet version of this contract at: https://testnet.stx.city/presale/explore
 Create a testnet presale at: https://testnet.stx.city/presale/create
 
